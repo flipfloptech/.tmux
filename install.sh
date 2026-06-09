@@ -78,12 +78,22 @@
     fi
     TMUX_CONF_LOCAL="$TMUX_CONF.local"
 
-    OH_MY_TMUX_CLONE_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/tmux/oh-my-tmux"
-    if [ -d "$OH_MY_TMUX_CLONE_PATH" ]; then
-      printf '⚠️  %s exists, making a backup\n' "${OH_MY_TMUX_CLONE_PATH/#"$HOME"/'~'}" >&2
-      printf '%s → %s\n' "${OH_MY_TMUX_CLONE_PATH/#"$HOME"/'~'}" "${OH_MY_TMUX_CLONE_PATH/#"$HOME"/'~'}.$now" >&2
-      if ! is_true "$DRY_RUN"; then
-        mv "$OH_MY_TMUX_CLONE_PATH" "$OH_MY_TMUX_CLONE_PATH.$now"
+    SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+    if [ -f "$SCRIPT_DIR/.tmux.conf" ] && [ -f "$SCRIPT_DIR/.tmux.conf.local" ]; then
+      USE_LOCAL=true
+      OH_MY_TMUX_CLONE_PATH="$SCRIPT_DIR"
+    else
+      USE_LOCAL=false
+      OH_MY_TMUX_CLONE_PATH="${XDG_DATA_HOME:-$HOME/.local/share}/tmux/oh-my-tmux"
+    fi
+
+    if ! is_true "$USE_LOCAL"; then
+      if [ -d "$OH_MY_TMUX_CLONE_PATH" ]; then
+        printf '⚠️  %s exists, making a backup\n' "${OH_MY_TMUX_CLONE_PATH/#"$HOME"/'~'}" >&2
+        printf '%s → %s\n' "${OH_MY_TMUX_CLONE_PATH/#"$HOME"/'~'}" "${OH_MY_TMUX_CLONE_PATH/#"$HOME"/'~'}.$now" >&2
+        if ! is_true "$DRY_RUN"; then
+          mv "$OH_MY_TMUX_CLONE_PATH" "$OH_MY_TMUX_CLONE_PATH.$now"
+        fi
       fi
     fi
 
@@ -92,13 +102,15 @@
     printf '✅ Using %s\n' "${TMUX_CONF/#"$HOME"/'~'}" >&2
     printf '✅ Using %s\n' "${TMUX_CONF_LOCAL/#"$HOME"/'~'}" >&2
 
-    printf '\n'
-    OH_MY_TMUX_REPOSITORY=${OH_MY_TMUX_REPOSITORY:-https://github.com/flipfloptech/.tmux.git}
-    printf '⬇️  Cloning Oh my tmux! repository...\n' >&2
-    if ! is_true "$DRY_RUN"; then
-      mkdir -p "$(dirname "$OH_MY_TMUX_CLONE_PATH")"
-      if ! git clone -q --single-branch "$OH_MY_TMUX_REPOSITORY" "$OH_MY_TMUX_CLONE_PATH"; then
-        printf '❌ Failed\n' >&2 && exit 1
+    if ! is_true "$USE_LOCAL"; then
+      printf '\n'
+      OH_MY_TMUX_REPOSITORY=${OH_MY_TMUX_REPOSITORY:-https://github.com/flipfloptech/.tmux.git}
+      printf '⬇️  Cloning Oh my tmux! repository...\n' >&2
+      if ! is_true "$DRY_RUN"; then
+        mkdir -p "$(dirname "$OH_MY_TMUX_CLONE_PATH")"
+        if ! git clone -q --single-branch "$OH_MY_TMUX_REPOSITORY" "$OH_MY_TMUX_CLONE_PATH"; then
+          printf '❌ Failed\n' >&2 && exit 1
+        fi
       fi
     fi
 
